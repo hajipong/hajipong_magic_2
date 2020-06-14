@@ -3,15 +3,17 @@ const color_num = {brack: '#333', white: '#FFF'};
 const init_stones = [{point: 'D4', color: 'white'}, {point: 'E4', color: 'brack'},
     {point: 'D5', color: 'brack'}, {point: 'E5', color: 'white'}];
 var current_stones = [];
+var turn;
 
 $(window).on('load', function () {
+    init();
     var board = document.getElementsByClassName('board');
     $(board).on('click', function (event) {
         var clientRect = this.getBoundingClientRect();
         var x = Math.floor((event.pageX - clientRect.left + window.pageXOffset) / cell_px);
         var y = Math.floor((event.pageY - clientRect.top + window.pageYOffset) / cell_px);
         var point = String.fromCharCode(x + 'A'.charCodeAt(0)) + String(y + 1);
-        send_put(point, 'brack');
+        send_put(point);
     });
 });
 
@@ -21,7 +23,7 @@ function stone(point, color) {
     circle.setAttribute('cy', (point.charAt(1) - 1) * cell_px + cell_px / 2);
     circle.setAttribute('r', 32);
     circle.setAttribute('fill', color);
-    circle.setAttribute('stroke', '#333');
+    circle.setAttribute('stroke', color_num.brack);
     return circle;
 }
 
@@ -32,31 +34,36 @@ function clear_board() {
 }
 
 $('.init').click(function () {
-    clear_board();
-    current_stones = init_stones;
-    update_board();
+    init();
 });
+
+function init() {
+    current_stones = init_stones;
+    turn = 'brack';
+    update_board();
+}
 
 function update_board() {
     clear_board();
     $.each(current_stones, function (index, val) {
-        var view_board_dom = document.querySelector('#view_board > svg');
-        view_board_dom.appendChild(stone(val.point, color_num[val.color]));
+        var board = document.querySelector('#view_board > svg');
+        board.appendChild(stone(val.point, color_num[val.color]));
     });
 }
 
-function send_put(point, color) {
+function send_put(point) {
     $.ajax({
         url: 'top/put_stone',
         type: 'POST',
         data: {
             'point': point,
-            'color': 'brack',
+            'turn': turn,
             'stones': current_stones
         },
         dataType: 'json',
         success: function (data) {
-            current_stones = data;
+            turn = data['turn'];
+            current_stones = data['stones'];
             update_board();
         },
         error: function (data) {
