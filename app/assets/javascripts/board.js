@@ -45,10 +45,11 @@ function init() {
 
 function update_board() {
     clear_board();
+    var board = document.createDocumentFragment();
     $.each(current_stones, function (index, val) {
-        var board = document.querySelector('#view_board > svg');
         board.appendChild(stone(val.point, color_num[val.color]));
     });
+    document.querySelector('#view_board > svg').appendChild(board);
 }
 
 function send_put(point) {
