@@ -1,24 +1,6 @@
-# README
+オセロをビットボードで実装する
+https://qiita.com/sensuikan1973/items/459b3e11d91f3cb37e43
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
-
-Things you may want to cover:
-
-* Ruby version
-
-* System dependencies
-
-* Configuration
-
-* Database creation
-
-* Database initialization
-
-* How to run the test suite
-
-* Services (job queues, cache servers, search engines, etc.)
-
-* Deployment instructions
-
-* ...
+を理解するために写経してみるリポジトリ。
+せっかくなのでGUIで動かしたかったのでrailsアプリにしつつ
+上の写経と混ぜて動かせるようにしていく。
