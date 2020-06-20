@@ -79,4 +79,23 @@ RSpec.describe Board, type: :model do
       end
     end
   end
+
+  describe 'can_put?' do
+    subject { board.can_put?(put) }
+    context '初期配置にF5' do
+      let(:board) { Board.new }
+      let(:put) {board.coordinate_to_bit('F', '5')}
+      it '置ける' do
+        expect(subject).to be_truthy
+      end
+    end
+
+    context '初期配置にF4' do
+      let(:board) { Board.new }
+      let(:put) {board.coordinate_to_bit('F', '4')}
+      it '置けない' do
+        expect(subject).to be_falsey
+      end
+    end
+  end
 end
