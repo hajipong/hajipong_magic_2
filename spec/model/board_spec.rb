@@ -82,19 +82,55 @@ RSpec.describe Board, type: :model do
 
   describe 'can_put?' do
     subject { board.can_put?(put) }
-    context '初期配置にF5' do
+    context '初期配置' do
       let(:board) { Board.new }
-      let(:put) {board.coordinate_to_bit('F', '5')}
-      it '置ける' do
-        expect(subject).to be_truthy
+      context 'F5' do
+        let(:put) {board.coordinate_to_bit('F', '5')}
+        it { expect(subject).to be_truthy }
       end
-    end
-
-    context '初期配置にF4' do
-      let(:board) { Board.new }
-      let(:put) {board.coordinate_to_bit('F', '4')}
-      it '置けない' do
-        expect(subject).to be_falsey
+      context 'F4' do
+        let(:put) {board.coordinate_to_bit('F', '4')}
+        it { expect(subject).to be_falsey }
+      end
+      context 'F3' do
+        let(:put) {board.coordinate_to_bit('F', '3')}
+        it { expect(subject).to be_falsey }
+      end
+      context 'E3' do
+        let(:put) {board.coordinate_to_bit('E', '3')}
+        it { expect(subject).to be_falsey }
+      end
+      context 'D3' do
+        let(:put) {board.coordinate_to_bit('D', '3')}
+        it { expect(subject).to be_truthy }
+      end
+      context 'C3' do
+        let(:put) {board.coordinate_to_bit('C', '3')}
+        it { expect(subject).to be_falsey }
+      end
+      context 'C4' do
+        let(:put) {board.coordinate_to_bit('C', '4')}
+        it { expect(subject).to be_truthy }
+      end
+      context 'C5' do
+        let(:put) {board.coordinate_to_bit('C', '5')}
+        it { expect(subject).to be_falsey }
+      end
+      context 'C6' do
+        let(:put) {board.coordinate_to_bit('C', '6')}
+        it { expect(subject).to be_falsey }
+      end
+      context 'D6' do
+        let(:put) {board.coordinate_to_bit('D', '6')}
+        it { expect(subject).to be_falsey }
+      end
+      context 'E6' do
+        let(:put) {board.coordinate_to_bit('E', '6')}
+        it { expect(subject).to be_truthy }
+      end
+      context 'F6' do
+        let(:put) {board.coordinate_to_bit('F', '6')}
+        it { expect(subject).to be_falsey }
       end
     end
   end

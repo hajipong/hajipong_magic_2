@@ -56,85 +56,51 @@ class Board
     all_side_watch_board = board.opponent_board & 0x007e7e7e7e7e7e00
     # 空きマスのみにビットが立っているボード
     blank_board = ~(board.player_board | board.opponent_board)
-    # 隣に相手の色があるかを一時保存する
-    tmp = nil
-    # 返り値
-    legal_board = nil
 
     # 8方向チェック
     # ・一度に返せる石は最大6つ ・高速化のためにforを展開(ほぼ意味ないけどw)
     # 左
-    tmp = horizontal_watch_board & (board.player_board << 1)
-    tmp |= horizontal_watch_board & (tmp << 1)
-    tmp |= horizontal_watch_board & (tmp << 1)
-    tmp |= horizontal_watch_board & (tmp << 1)
-    tmp |= horizontal_watch_board & (tmp << 1)
-    tmp |= horizontal_watch_board & (tmp << 1)
-    legal_board = blank_board & (tmp << 1)
+    left_shift = ->(shift_board) { shift_board << 1 }
+    legal_board = legal_board(board.player_board, horizontal_watch_board, blank_board, left_shift)
 
     # 右
-    tmp = horizontal_watch_board & (board.player_board >> 1)
-    tmp |= horizontal_watch_board & (tmp >> 1)
-    tmp |= horizontal_watch_board & (tmp >> 1)
-    tmp |= horizontal_watch_board & (tmp >> 1)
-    tmp |= horizontal_watch_board & (tmp >> 1)
-    tmp |= horizontal_watch_board & (tmp >> 1)
-    legal_board |= blank_board & (tmp >> 1)
+    right_shift = ->(shift_board) { shift_board >> 1 }
+    legal_board |= legal_board(board.player_board, horizontal_watch_board, blank_board, right_shift)
 
     # 上
-    tmp = vertical_watch_board & (board.player_board << 8)
-    tmp |= vertical_watch_board & (tmp << 8)
-    tmp |= vertical_watch_board & (tmp << 8)
-    tmp |= vertical_watch_board & (tmp << 8)
-    tmp |= vertical_watch_board & (tmp << 8)
-    tmp |= vertical_watch_board & (tmp << 8)
-    legal_board |= blank_board & (tmp << 8)
+    up_shift = ->(shift_board) { shift_board << 8 }
+    legal_board |= legal_board(board.player_board, vertical_watch_board, blank_board, up_shift)
 
     # 下
-    tmp = vertical_watch_board & (board.player_board >> 8)
-    tmp |= vertical_watch_board & (tmp >> 8)
-    tmp |= vertical_watch_board & (tmp >> 8)
-    tmp |= vertical_watch_board & (tmp >> 8)
-    tmp |= vertical_watch_board & (tmp >> 8)
-    tmp |= vertical_watch_board & (tmp >> 8)
-    legal_board |= blank_board & (tmp >> 8)
+    down_shift = ->(shift_board) { shift_board >> 8 }
+    legal_board |= legal_board(board.player_board, vertical_watch_board, blank_board, down_shift)
 
     # 右斜め上
-    tmp = all_side_watch_board & (board.player_board << 7)
-    tmp |= all_side_watch_board & (tmp << 7)
-    tmp |= all_side_watch_board & (tmp << 7)
-    tmp |= all_side_watch_board & (tmp << 7)
-    tmp |= all_side_watch_board & (tmp << 7)
-    tmp |= all_side_watch_board & (tmp << 7)
-    legal_board |= blank_board & (tmp << 7)
+    right_up_shift = ->(shift_board) { shift_board << 7 }
+    legal_board |= legal_board(board.player_board, all_side_watch_board, blank_board, right_up_shift)
 
     # 左斜め上
-    tmp = all_side_watch_board & (board.player_board << 9)
-    tmp |= all_side_watch_board & (tmp << 9)
-    tmp |= all_side_watch_board & (tmp << 9)
-    tmp |= all_side_watch_board & (tmp << 9)
-    tmp |= all_side_watch_board & (tmp << 9)
-    tmp |= all_side_watch_board & (tmp << 9)
-    legal_board |= blank_board & (tmp << 9)
+    left_up_shift = ->(shift_board) { shift_board << 9 }
+    legal_board |= legal_board(board.player_board, all_side_watch_board, blank_board, left_up_shift)
 
     # 右斜め下
-    tmp = all_side_watch_board & (board.player_board >> 9)
-    tmp |= all_side_watch_board & (tmp >> 9)
-    tmp |= all_side_watch_board & (tmp >> 9)
-    tmp |= all_side_watch_board & (tmp >> 9)
-    tmp |= all_side_watch_board & (tmp >> 9)
-    tmp |= all_side_watch_board & (tmp >> 9)
-    legal_board |= blank_board & (tmp >> 9)
+    right_down_shift = ->(shift_board) { shift_board >> 9 }
+    legal_board |= legal_board(board.player_board, all_side_watch_board, blank_board, right_down_shift)
 
     # 左斜め下
-    tmp = all_side_watch_board & (board.player_board >> 7)
-    tmp |= all_side_watch_board & (tmp >> 7)
-    tmp |= all_side_watch_board & (tmp >> 7)
-    tmp |= all_side_watch_board & (tmp >> 7)
-    tmp |= all_side_watch_board & (tmp >> 7)
-    tmp |= all_side_watch_board & (tmp >> 7)
-    legal_board |= blank_board & (tmp >> 7)
+    left_down_shift = ->(shift_board) { shift_board >> 7 }
+    legal_board |= legal_board(board.player_board, all_side_watch_board, blank_board, left_down_shift)
 
     legal_board
+  end
+
+  def legal_board(player_board, opponent_board, blank_board, shift)
+    tmp = opponent_board & shift.call(player_board)
+    tmp |= opponent_board & shift.call(tmp)
+    tmp |= opponent_board & shift.call(tmp)
+    tmp |= opponent_board & shift.call(tmp)
+    tmp |= opponent_board & shift.call(tmp)
+    tmp |= opponent_board & shift.call(tmp)
+    blank_board & shift.call(tmp)
   end
 end
