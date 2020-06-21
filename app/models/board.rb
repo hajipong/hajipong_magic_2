@@ -5,39 +5,49 @@ class Board
   # MARK: Constant
   BLACK_TURN = 100
   WHITE_TURN = -100
-
+  HORIZONTAL_GUARD = 0x7e7e7e7e7e7e7e7e
+  VERTICAL_GUARD = 0x00FFFFFFFFFFFF00
+  ALL_SIDE_GUARD= 0x007e7e7e7e7e7e00
   DIRECTIONS = {
       top: {
           shift: ->(board) { board << 8 },
-          guard: 0xffffffffffffff00
+          transfer_guard: 0xffffffffffffff00,
+          legal_guard: VERTICAL_GUARD
       },
       down: {
           shift: ->(board) { board >> 8 },
-          guard: 0x00ffffffffffffff
+          transfer_guard: 0x00ffffffffffffff,
+          legal_guard: VERTICAL_GUARD
       },
       left: {
           shift: ->(board) { board << 1 },
-          guard: 0xfefefefefefefefe
+          transfer_guard: 0xfefefefefefefefe,
+          legal_guard: HORIZONTAL_GUARD
       },
       right: {
           shift: ->(board) { board >> 1 },
-          guard: 0x7f7f7f7f7f7f7f7f
+          transfer_guard: 0x7f7f7f7f7f7f7f7f,
+          legal_guard: HORIZONTAL_GUARD
       },
       top_left: {
           shift: ->(board) { board << 9 },
-          guard: 0xfefefefefefefe00
+          transfer_guard: 0xfefefefefefefe00,
+          legal_guard: ALL_SIDE_GUARD
       },
       top_right: {
           shift: ->(board) { board << 7 },
-          guard: 0x7f7f7f7f7f7f7f00
+          transfer_guard: 0x7f7f7f7f7f7f7f00,
+          legal_guard: ALL_SIDE_GUARD
       },
       down_left: {
           shift: ->(board) { board >> 7 },
-          guard: 0x00fefefefefefefe
+          transfer_guard: 0x00fefefefefefefe,
+          legal_guard: ALL_SIDE_GUARD
       },
       down_right: {
           shift: ->(board) { board >> 9 },
-          guard: 0x007f7f7f7f7f7f7f
+          transfer_guard: 0x007f7f7f7f7f7f7f,
+          legal_guard: ALL_SIDE_GUARD
       }
   }.freeze
 
@@ -71,7 +81,6 @@ class Board
   # put 着手したマス
   def can_put?(put)
     # 着手可能なマスにフラグが立っている合法手ボードを生成
-    legal_board = DIRECTIONS.values.map(&method(:legal_board)).inject(:|)
     # 今回の着手が、その合法手ボードに含まれれば着手可能
     put & legal_board == put
   end
@@ -88,17 +97,46 @@ class Board
     @now_index += 1
   end
 
-  private
+  def pass?
+    legal_board == 0 && to_opponent.legal_board != 0
+  end
+
+  def game_finished?
+    legal_board == 0 && to_opponent.legal_board == 0
+  end
+
+  def swap_board
+    tmp = @player_board
+    @player_board = @opponent_board
+    @opponent_board = tmp
+    @now_turn = @now_turn * -1
+  end
 
   # 着手可能マス
-  def legal_board(direction)
-    board = adjacent_opponents(direction, @player_board)
+  def legal_board
+    DIRECTIONS.values.map(&method(:legal_board_direction)).inject(:|)
+  end
+
+  def to_opponent
+    tmp_board = Board.new
+    tmp_board.now_turn = @now_turn
+    tmp_board.now_index = @now_index
+    tmp_board.player_board = @opponent_board
+    tmp_board.opponent_board = @player_board
+    tmp_board
+  end
+
+  private
+
+  # 着手可能マス(一方向)
+  def legal_board_direction(direction)
+    board = adjacent_opponents(direction, @player_board, :legal_guard)
     blank_board & direction[:shift].call(board)
   end
 
-  # ひっくり返す石
+  # ひっくり返す石(一方向)
   def transfer_board(direction, put)
-    board = adjacent_opponents(direction, put)
+    board = adjacent_opponents(direction, put, :transfer_guard)
     @player_board & direction[:shift].call(board) != 0 ? board : 0
   end
 
@@ -109,15 +147,15 @@ class Board
 
   # 指定方向に連続して隣接する相手石
   # 初回とその結果を踏まえながらの最大5回分
-  def adjacent_opponents(direction, board)
-    (0..4).inject(adjacent_opponent(direction, board)) do |tmp_board, i|
-      tmp_board | adjacent_opponent(direction, tmp_board)
+  def adjacent_opponents(direction, board, guard_type)
+    (0..4).inject(adjacent_opponent(direction, board, guard_type)) do |tmp_board, i|
+      tmp_board | adjacent_opponent(direction, tmp_board, guard_type)
     end
   end
 
   # 指定方向に1マス隣接する相手石
   # ガードを付けることで盤面ループした判定を防ぐ
-  def adjacent_opponent(direction, board)
-    direction[:shift].call(board) & @opponent_board & direction[:guard]
+  def adjacent_opponent(direction, board, guard_type)
+    direction[:shift].call(board) & @opponent_board & direction[guard_type]
   end
 end

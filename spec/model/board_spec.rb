@@ -179,6 +179,91 @@ RSpec.describe Board, type: :model do
     end
   end
 
+  describe 'pass' do
+    context '黒番パス' do
+      let(:board) do
+        b = Board.new
+        b.player_board = player_board
+        b.opponent_board = opponent_board
+        b
+      end
+      let(:player_board) do
+<<-BOARD.gsub(/[\r\n]/,"").to_i(2)
+00000000
+00000000
+00001111
+00001000
+00001000
+00001111
+00000000
+00000000
+BOARD
+      end
+      let(:opponent_board) do
+        <<-BOARD.gsub(/[\r\n]/,"").to_i(2)
+00000000
+00000000
+00000000
+00000111
+00000111
+00000000
+00000000
+00000000
+        BOARD
+      end
+      context '黒番' do
+        it 'パス' do
+          expect(board.pass?).to be_truthy
+        end
+      end
+
+      context '白番' do
+        it 'パスなし' do
+          expect(board.to_opponent.pass?).to be_falsey
+        end
+      end
+    end
+  end
+
+
+  describe 'game_finished?' do
+    context '空きマスあり終局' do
+      let(:board) do
+        b = Board.new
+        b.player_board = player_board
+        b.opponent_board = opponent_board
+        b
+      end
+      let(:player_board) do
+        <<-BOARD.gsub(/[\r\n]/,"").to_i(2)
+11111110
+11111111
+00001111
+00001111
+00011111
+00111111
+01111111
+11111111
+        BOARD
+      end
+      let(:opponent_board) do
+        <<-BOARD.gsub(/[\r\n]/,"").to_i(2)
+00000000
+00000000
+11110000
+11110000
+11100000
+11000000
+10000000
+00000000
+        BOARD
+      end
+      it '終局' do
+        expect(board.game_finished?).to be_truthy
+      end
+    end
+  end
+
   def board_to_s(board)
     board.to_s(2).rjust(64, '0')
         .insert(56, "\n").insert(48, "\n").insert(40, "\n")
