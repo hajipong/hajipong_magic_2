@@ -1,7 +1,7 @@
 const cell_px = 80;
-const color_num = {brack: '#333', white: '#FFF'};
-const init_stones = [{point: 'D4', color: 'white'}, {point: 'E4', color: 'brack'},
-    {point: 'D5', color: 'brack'}, {point: 'E5', color: 'white'}];
+const color_num = {black: '#333', white: '#FFF'};
+const init_stones = [{point: 'D4', color: 'white'}, {point: 'E4', color: 'black'},
+    {point: 'D5', color: 'black'}, {point: 'E5', color: 'white'}];
 var current_stones = [];
 var turn;
 
@@ -23,7 +23,7 @@ function stone(point, color) {
     circle.setAttribute('cy', (point.charAt(1) - 1) * cell_px + cell_px / 2);
     circle.setAttribute('r', 32);
     circle.setAttribute('fill', color);
-    circle.setAttribute('stroke', color_num.brack);
+    circle.setAttribute('stroke', color_num.black);
     return circle;
 }
 
@@ -39,7 +39,7 @@ $('.init').click(function () {
 
 function init() {
     current_stones = init_stones;
-    turn = 'brack';
+    turn = 'black';
     update_board();
 }
 

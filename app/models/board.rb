@@ -9,67 +9,31 @@ class Board
   VERTICAL_GUARD = 0x00FFFFFFFFFFFF00
   ALL_SIDE_GUARD= 0x007e7e7e7e7e7e00
   DIRECTIONS = {
-      top: {
-          shift: ->(board) { board << 8 },
-          transfer_guard: 0xffffffffffffff00,
-          legal_guard: VERTICAL_GUARD
-      },
-      down: {
-          shift: ->(board) { board >> 8 },
-          transfer_guard: 0x00ffffffffffffff,
-          legal_guard: VERTICAL_GUARD
-      },
-      left: {
-          shift: ->(board) { board << 1 },
-          transfer_guard: 0xfefefefefefefefe,
-          legal_guard: HORIZONTAL_GUARD
-      },
-      right: {
-          shift: ->(board) { board >> 1 },
-          transfer_guard: 0x7f7f7f7f7f7f7f7f,
-          legal_guard: HORIZONTAL_GUARD
-      },
-      top_left: {
-          shift: ->(board) { board << 9 },
-          transfer_guard: 0xfefefefefefefe00,
-          legal_guard: ALL_SIDE_GUARD
-      },
-      top_right: {
-          shift: ->(board) { board << 7 },
-          transfer_guard: 0x7f7f7f7f7f7f7f00,
-          legal_guard: ALL_SIDE_GUARD
-      },
-      down_left: {
-          shift: ->(board) { board >> 7 },
-          transfer_guard: 0x00fefefefefefefe,
-          legal_guard: ALL_SIDE_GUARD
-      },
-      down_right: {
-          shift: ->(board) { board >> 9 },
-          transfer_guard: 0x007f7f7f7f7f7f7f,
-          legal_guard: ALL_SIDE_GUARD
-      }
+      top:        { shift: ->(board) { board << 8 }, guard: VERTICAL_GUARD },
+      down:       { shift: ->(board) { board >> 8 }, guard: VERTICAL_GUARD },
+      left:       { shift: ->(board) { board << 1 }, guard: HORIZONTAL_GUARD },
+      right:      { shift: ->(board) { board >> 1 }, guard: HORIZONTAL_GUARD },
+      top_left:   { shift: ->(board) { board << 9 }, guard: ALL_SIDE_GUARD },
+      top_right:  { shift: ->(board) { board << 7 }, guard: ALL_SIDE_GUARD },
+      down_left:  { shift: ->(board) { board >> 7 }, guard: ALL_SIDE_GUARD },
+      down_right: { shift: ->(board) { board >> 9 }, guard: ALL_SIDE_GUARD }
   }.freeze
 
-  def initialize
-    init
-  end
-
-  # MARK: Initialization
-  def init
+  def initialize(player_board: 0x0000000810000000, opponent_board: 0x0000001008000000)
     @now_turn = BLACK_TURN
     @now_index = 1
 
     # 一般的な初期配置を指定
-    @player_board = 0x0000000810000000
-    @opponent_board = 0x0000001008000000
+    @player_board = player_board
+    @opponent_board = opponent_board
   end
 
   # 座標をbitに変換する
   # x 横座標(A~H)
   # y 縦座標(1~8)
   # return 着手箇所のみにフラグが立っている64ビット
-  def coordinate_to_bit(x, y)
+  def coordinate_to_bit(point)
+    x, y = point.split(//)
     mask = 0x8000000000000000
     # X方向へのシフト
     mask = mask >> (x.ord - 'A'.ord)
@@ -130,13 +94,13 @@ class Board
 
   # 着手可能マス(一方向)
   def legal_board_direction(direction)
-    board = adjacent_opponents(direction, @player_board, :legal_guard)
+    board = adjacent_opponents(direction, @player_board)
     blank_board & direction[:shift].call(board)
   end
 
   # ひっくり返す石(一方向)
   def transfer_board(direction, put)
-    board = adjacent_opponents(direction, put, :transfer_guard)
+    board = adjacent_opponents(direction, put)
     @player_board & direction[:shift].call(board) != 0 ? board : 0
   end
 
@@ -147,15 +111,15 @@ class Board
 
   # 指定方向に連続して隣接する相手石
   # 初回とその結果を踏まえながらの最大5回分
-  def adjacent_opponents(direction, board, guard_type)
-    (0..4).inject(adjacent_opponent(direction, board, guard_type)) do |tmp_board, i|
-      tmp_board | adjacent_opponent(direction, tmp_board, guard_type)
+  def adjacent_opponents(direction, board)
+    (0..4).inject(adjacent_opponent(direction, board)) do |tmp_board, i|
+      tmp_board | adjacent_opponent(direction, tmp_board)
     end
   end
 
   # 指定方向に1マス隣接する相手石
   # ガードを付けることで盤面ループした判定を防ぐ
-  def adjacent_opponent(direction, board, guard_type)
-    direction[:shift].call(board) & @opponent_board & direction[guard_type]
+  def adjacent_opponent(direction, board)
+    direction[:shift].call(board) & @opponent_board & direction[:guard]
   end
 end
