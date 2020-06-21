@@ -134,4 +134,48 @@ RSpec.describe Board, type: :model do
       end
     end
   end
+
+  describe 'reverse' do
+    subject { board.reverse(put) }
+    context '初期配置' do
+      let(:board) { Board.new }
+      context 'F5' do
+        let(:put) { board.coordinate_to_bit('F', '5') }
+        let(:expected) do <<-BOARD.gsub(/[\r\n]/,"").to_i(2)
+00000000
+00000000
+00000000
+00001000
+00011100
+00000000
+00000000
+00000000
+        BOARD
+        end
+        it 'E5が返る' do
+          subject
+          expect(board.player_board).to eq(expected)
+        end
+      end
+
+      context 'D3' do
+        let(:put) { board.coordinate_to_bit('D', '3') }
+        let(:expected) do <<-BOARD.gsub(/[\r\n]/,"").to_i(2)
+00000000
+00000000
+00010000
+00011000
+00010000
+00000000
+00000000
+00000000
+        BOARD
+        end
+        it 'D4が返る' do
+          subject
+          expect(board.player_board).to eq(expected)
+        end
+      end
+    end
+  end
 end
