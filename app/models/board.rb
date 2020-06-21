@@ -6,6 +6,41 @@ class Board
   BLACK_TURN = 100
   WHITE_TURN = -100
 
+  DIRECTIONS = {
+      top: {
+          shift: ->(board) { board << 8 },
+          guard: 0xffffffffffffff00
+      },
+      down: {
+          shift: ->(board) { board >> 8 },
+          guard: 0x00ffffffffffffff
+      },
+      left: {
+          shift: ->(board) { board << 1 },
+          guard: 0xfefefefefefefefe
+      },
+      right: {
+          shift: ->(board) { board >> 1 },
+          guard: 0x7f7f7f7f7f7f7f7f
+      },
+      top_left: {
+          shift: ->(board) { board << 9 },
+          guard: 0xfefefefefefefe00
+      },
+      top_right: {
+          shift: ->(board) { board << 7 },
+          guard: 0x7f7f7f7f7f7f7f00
+      },
+      down_left: {
+          shift: ->(board) { board >> 7 },
+          guard: 0x00fefefefefefefe
+      },
+      down_right: {
+          shift: ->(board) { board >> 9 },
+          guard: 0x007f7f7f7f7f7f7f
+      }
+  }.freeze
+
   def initialize
     init
   end
@@ -33,129 +68,56 @@ class Board
   end
 
   # 着手可否の判定
-  # put 置いた位置のみにフラグが立っている64ビット
-  # return 着手可能ならtrue
+  # put 着手したマス
   def can_put?(put)
     # 着手可能なマスにフラグが立っている合法手ボードを生成
-    legal_board = make_legal_board(self)
+    legal_board = DIRECTIONS.values.map(&method(:legal_board)).inject(:|)
     # 今回の着手が、その合法手ボードに含まれれば着手可能
     put & legal_board == put
   end
 
   # 着手し,反転処理を行う
-  # put: 着手した場所のみにフラグが立つ64ビット
+  # put: 着手したマス
   def reverse(put)
     # 着手した場合のボードを生成
-    rev = 0
-    (0..7).each do |k|
-      rev_ = 0
-      # 着手地点から書く方向にシフト
-      mask = transfer(put: put, k: k)
-      # シフト地点が盤内であり、相手の石が存在すれば実行
-      while (mask != 0) && ((mask & opponent_board) != 0) do
-        # 反転地点の仮記録
-        rev_ |= mask
-        # 次のマスへ
-        mask = transfer(put: mask, k: k)
-      end
-      # 到着地点に自分の種石があれば本記録
-      if (mask & player_board) != 0
-        rev |= rev_
-      end
-    end
+    transfer_board = DIRECTIONS.values.map { |direction| transfer_board(direction, put) }.inject(:|)
     # 反転する
-    @player_board   ^= put | rev
-    @opponent_board ^= rev
+    @player_board   ^= put | transfer_board
+    @opponent_board ^= transfer_board
     # 現在何手目かを更新
     @now_index += 1
   end
 
   private
 
-  # 手番側の合法手ボードを生成
-  # board Boardインスタンス
-  # return Uint64  playerから見て、置けるマスのみにフラグが立っている64ビット
-  def make_legal_board(board)
-    # 左右端の番人
-    horizontal_watch_board = board.opponent_board & 0x7e7e7e7e7e7e7e7e
-    # 上下端の番人
-    vertical_watch_board = board.opponent_board & 0x00FFFFFFFFFFFF00
-    # 全辺の番人
-    all_side_watch_board = board.opponent_board & 0x007e7e7e7e7e7e00
-    # 空きマスのみにビットが立っているボード
-    blank_board = ~(board.player_board | board.opponent_board)
-
-    # 8方向チェック
-    # ・一度に返せる石は最大6つ ・高速化のためにforを展開(ほぼ意味ないけどw)
-    # 左
-    left_shift = ->(shift_board) { shift_board << 1 }
-    legal_board = legal_board(board.player_board, horizontal_watch_board, blank_board, left_shift)
-
-    # 右
-    right_shift = ->(shift_board) { shift_board >> 1 }
-    legal_board |= legal_board(board.player_board, horizontal_watch_board, blank_board, right_shift)
-
-    # 上
-    up_shift = ->(shift_board) { shift_board << 8 }
-    legal_board |= legal_board(board.player_board, vertical_watch_board, blank_board, up_shift)
-
-    # 下
-    down_shift = ->(shift_board) { shift_board >> 8 }
-    legal_board |= legal_board(board.player_board, vertical_watch_board, blank_board, down_shift)
-
-    # 右斜め上
-    right_up_shift = ->(shift_board) { shift_board << 7 }
-    legal_board |= legal_board(board.player_board, all_side_watch_board, blank_board, right_up_shift)
-
-    # 左斜め上
-    left_up_shift = ->(shift_board) { shift_board << 9 }
-    legal_board |= legal_board(board.player_board, all_side_watch_board, blank_board, left_up_shift)
-
-    # 右斜め下
-    right_down_shift = ->(shift_board) { shift_board >> 9 }
-    legal_board |= legal_board(board.player_board, all_side_watch_board, blank_board, right_down_shift)
-
-    # 左斜め下
-    left_down_shift = ->(shift_board) { shift_board >> 7 }
-    legal_board |= legal_board(board.player_board, all_side_watch_board, blank_board, left_down_shift)
-
-    legal_board
+  # 着手可能マス
+  def legal_board(direction)
+    board = adjacent_opponents(direction, @player_board)
+    blank_board & direction[:shift].call(board)
   end
 
-  def legal_board(player_board, opponent_board, blank_board, shift)
-    tmp = opponent_board & shift.call(player_board)
-    tmp |= opponent_board & shift.call(tmp)
-    tmp |= opponent_board & shift.call(tmp)
-    tmp |= opponent_board & shift.call(tmp)
-    tmp |= opponent_board & shift.call(tmp)
-    tmp |= opponent_board & shift.call(tmp)
-    blank_board & shift.call(tmp)
+  # ひっくり返す石
+  def transfer_board(direction, put)
+    board = adjacent_opponents(direction, put)
+    @player_board & direction[:shift].call(board) != 0 ? board : 0
   end
 
-  # 反転箇所を求める
-  # put 着手した場所のビット値
-  # k   反転方向(8つ)
-  # return 反転箇所にフラグが立っている64ビット
-  def transfer(put:, k:)
-    case k
-    when 0 then # 上
-      (put << 8) & 0xffffffffffffff00
-    when 1 then # 右上
-      (put << 7) & 0x7f7f7f7f7f7f7f00
-    when 2 then # 右
-      (put >> 1) & 0x7f7f7f7f7f7f7f7f
-    when 3 then # 右下
-      (put >> 9) & 0x007f7f7f7f7f7f7f
-    when 4 then # 下
-      (put >> 8) & 0x00ffffffffffffff
-    when 5 then # 左下
-      (put >> 7) & 0x00fefefefefefefe
-    when 6 then # 左
-      (put << 1) & 0xfefefefefefefefe
-    when 7 then # 左上
-      (put << 9) & 0xfefefefefefefe00
-    else
-      0
+  # 空きマスのみにビットが立っているボード
+  def blank_board
+    ~(@player_board | @opponent_board)
+  end
+
+  # 指定方向に連続して隣接する相手石
+  # 初回とその結果を踏まえながらの最大5回分
+  def adjacent_opponents(direction, board)
+    (0..4).inject(adjacent_opponent(direction, board)) do |tmp_board, i|
+      tmp_board | adjacent_opponent(direction, tmp_board)
     end
+  end
+
+  # 指定方向に1マス隣接する相手石
+  # ガードを付けることで盤面ループした判定を防ぐ
+  def adjacent_opponent(direction, board)
+    direction[:shift].call(board) & @opponent_board & direction[:guard]
   end
 end

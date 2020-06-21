@@ -178,4 +178,10 @@ RSpec.describe Board, type: :model do
       end
     end
   end
+
+  def board_to_s(board)
+    board.to_s(2).rjust(64, '0')
+        .insert(56, "\n").insert(48, "\n").insert(40, "\n")
+        .insert(32, "\n").insert(24, "\n").insert(16, "\n").insert(8, "\n")
+  end
 end
