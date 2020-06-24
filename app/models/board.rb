@@ -1,6 +1,5 @@
 class Board
-  # player側ビットボード, opponent側ビットボード
-  attr_accessor :player_board, :opponent_board
+  attr_accessor :player_stones, :opponent_stones
 
   HORIZONTAL_GUARD = 0x7e7e7e7e7e7e7e7e.freeze
   VERTICAL_GUARD = 0x00FFFFFFFFFFFF00.freeze
@@ -16,59 +15,61 @@ class Board
       down_right: { shift: ->(board) { board >> 9 }, guard: ALL_SIDE_GUARD }
   }.freeze
 
-  def initialize(player_board: 0x0000000810000000, opponent_board: 0x0000001008000000)
-    @player_board = player_board
-    @opponent_board = opponent_board
+  def initialize(player_stones: 0x0000000810000000, opponent_stones: 0x0000001008000000)
+    # 着手しようとしてる側の石
+    @player_stones = player_stones
+    # 着手しようとしてる側から見て相手の石
+    @opponent_stones = opponent_stones
   end
 
   # 座標をbitに変換する
-  # x 横座標(A~H)
-  # y 縦座標(1~8)
-  def coordinate_to_bit(point)
+  # A1～H8
+  def point_to_bit(point)
     x, y = point.split(//)
-    mask = 0x8000000000000000
-    mask = mask >> (x.ord - 'A'.ord)
-    mask >> ( (y.to_i - 1) * 8)
+    0x8000000000000000 >> (x.ord - 'A'.ord) >> ( (y.to_i - 1) * 8)
   end
 
   # 着手可否の判定
   def can_put?(put)
-    put & legal_board != 0
+    put_stone = point_to_bit(put)
+    put_stone & can_put_cells != 0
   end
 
-  # 着手し,反転処理を行う
+  # 着手して石返しする
   def reverse(put)
-    transfer_board = transfer_board(put)
-    @player_board ^= put | transfer_board
-    @opponent_board ^= transfer_board
+    put_stone = point_to_bit(put)
+    reversed_stones = reversed_stones(put_stone)
+    @player_stones ^= put_stone | reversed_stones
+    @opponent_stones ^= reversed_stones
   end
 
+  # パスか？
   def pass?
-    legal_board == 0
+    can_put_cells == 0
   end
 
   # 相手側のボード
-  def to_opponent
-    Board.new(player_board: @opponent_board, opponent_board: @player_board)
+  def opponent_board
+    Board.new(player_stones: @opponent_stones, opponent_stones: @player_stones)
   end
 
   private
 
   # 着手可能マス
-  def legal_board
+  def can_put_cells
     DIRECTIONS.values.map do |direction|
-      board = adjacent_opponents(direction, @player_board)
-      # 最後が空きマスなら着手できる
-      blank_board & direction[:shift].call(board)
+      board = adjacent_opponents(direction, @player_stones)
+      # 最後が空きマスなら着手可能マスとする
+      blank_cells & direction[:shift].call(board)
     end.inject(:|)
   end
 
-  # ひっくり返す石
-  def transfer_board(put)
+  # 石返し対象
+  def reversed_stones(put)
     DIRECTIONS.values.map do |direction|
       board = adjacent_opponents(direction, put)
-      # 最後に種石があればひっくり返しできる
-      @player_board & direction[:shift].call(board) != 0 ? board : 0
+      # 最後に種石があれば石返し対象とする
+      @player_stones & direction[:shift].call(board) != 0 ? board : 0
     end.inject(:|)
   end
 
@@ -83,11 +84,11 @@ class Board
   # 指定方向に1マス隣接する相手石
   # ガードを付けることで盤面ループした判定を防ぐ
   def adjacent_opponent(direction, board)
-    direction[:shift].call(board) & @opponent_board & direction[:guard]
+    direction[:shift].call(board) & @opponent_stones & direction[:guard]
   end
 
   # 空きマス
-  def blank_board
-    ~(@player_board | @opponent_board)
+  def blank_cells
+    ~(@player_stones | @opponent_stones)
   end
 end
