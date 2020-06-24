@@ -58,8 +58,7 @@ function send_put(point) {
         type: 'POST',
         data: {
             'point': point,
-            'turn': turn,
-            'stones': current_stones
+            'turn': turn
         },
         dataType: 'json',
         success: function (data) {
