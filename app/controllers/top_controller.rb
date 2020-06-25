@@ -7,20 +7,14 @@ class TopController < ApplicationController
   def put_stone
     game = Game.find(5)
     game.put(params[:point])
+    # game_log(game)
+    render json: { turn: game.turn, black_stones: "%016x"%game.black_stones, white_stones: "%016x"%game.white_stones }, status: 200
+  end
 
-    stones = game.black_stones.to_s(2).rjust(64, '0').split(//).map.with_index do |bit, i|
-      if bit == '1'
-        { point: ('A'.ord + i.modulo(8)).chr + (i.div(8) + 1).to_s, color: 'black' }
-      end
-    end.compact
-
-    stones.push(game.white_stones.to_s(2).rjust(64, '0').split(//).map.with_index do |bit, i|
-      if bit == '1'
-        { point: ('A'.ord + i.modulo(8)).chr + (i.div(8) + 1).to_s, color: 'white' }
-      end
-    end.compact)
-    stones.flatten!
-
-    render json: { turn: game.turn, stones: stones.map.with_index { |stone, i| [i.to_s, stone] }.to_h }, status: 200
+  def game_log(game)
+    (0..63).each do |i|
+      print game.black_stones & (0x8000000000000000 >> i) > 0 ? 1 : 0
+      puts '' if i % 8 == 7
+    end
   end
 end
