@@ -16,16 +16,19 @@ class Game
   end
 
   def self.find(game_id)
-    redis = Redis.new
-    game = Game.new
-    game.id = game_id
-    game.move = redis.get("game:#{game_id}:move").to_i
-    game.turn = redis.get("game:#{game_id}:turn").to_i
-    game.black_time = redis.get("game:#{game_id}:black_time").to_i
-    game.white_time = redis.get("game:#{game_id}:white_time").to_i
-    game.black_stones = redis.get("game:#{game_id}:black_stones").to_i
-    game.white_stones = redis.get("game:#{game_id}:white_stones").to_i
-    game
+    Redis.current.with do |redis|
+      return Game.new(game_id) if redis.get("game:#{game_id}:move").nil?
+  
+      game = Game.new
+      game.id = game_id
+      game.move = redis.get("game:#{game_id}:move").to_i
+      game.turn = redis.get("game:#{game_id}:turn").to_i
+      game.black_time = redis.get("game:#{game_id}:black_time").to_i
+      game.white_time = redis.get("game:#{game_id}:white_time").to_i
+      game.black_stones = redis.get("game:#{game_id}:black_stones").to_i
+      game.white_stones = redis.get("game:#{game_id}:white_stones").to_i
+      game
+    end
   end
 
   def put(point)
@@ -43,13 +46,15 @@ class Game
   private
 
   def save
-    redis = Redis.new
-    redis.set("game:#{@id}:move", @move)
-    redis.set("game:#{@id}:turn", @turn)
-    redis.set("game:#{@id}:black_time", @black_time)
-    redis.set("game:#{@id}:white_time", @white_time)
-    redis.set("game:#{@id}:black_stones", @black_stones)
-    redis.set("game:#{@id}:white_stones", @white_stones)
+    Redis.current.with do |redis|
+      redis.set("game:#{@id}:id", @id)
+      redis.set("game:#{@id}:move", @move)
+      redis.set("game:#{@id}:turn", @turn)
+      redis.set("game:#{@id}:black_time", @black_time)
+      redis.set("game:#{@id}:white_time", @white_time)
+      redis.set("game:#{@id}:black_stones", @black_stones)
+      redis.set("game:#{@id}:white_stones", @white_stones)
+    end
   end
 
   def to_board

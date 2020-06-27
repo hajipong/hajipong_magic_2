@@ -66,3 +66,4 @@ gem 'html2slim'
 gem 'jquery-rails'
 
 gem 'rspec-rails'
+gem 'connection_pool'
