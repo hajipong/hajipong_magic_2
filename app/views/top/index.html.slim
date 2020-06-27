@@ -1,7 +1,7 @@
 h1 ビッドボード実装
 
 div
-  button.init クリア
+  =link_to 'クリア', top_clear_path, remote: true
 
 #view_board
 
@@ -10,5 +10,3 @@ div
     - (0..8).each do |i|
       line x1="#{i * 80}" y1="0" x2="#{i * 80}" y2="640" fill="none" stroke="#222222" stroke-linejoin="round" stroke-width="1"
       line x1="0" y1="#{i * 80}" x2="640" y2="#{i * 80}" fill="none" stroke="#222222" stroke-linejoin="round" stroke-width="1"
-
-=javascript_include_tag 'board.js'

@@ -43,6 +43,10 @@ class Game
     end
   end
 
+  def to_h
+    { turn: @turn, black_stones: "%016x"%@black_stones, white_stones: "%016x"%@white_stones }
+  end
+
   private
 
   def save

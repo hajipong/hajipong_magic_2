@@ -1,12 +1,22 @@
 class TopController < ApplicationController
   def index
+  end
+
+  def clear
     Redis.new.flushdb
-    Game.new(5)
+    game = Game.new(5)
+    ActionCable.server.broadcast 'game_channel', game: game.to_h
+  end
+
+  def now
+    game = Game.find(5)
+    render json: { game: game.to_h }, status: 200
   end
 
   def put_stone
     game = Game.find(5)
     game.put(params[:point])
-    render json: { turn: game.turn, black_stones: "%016x"%game.black_stones, white_stones: "%016x"%game.white_stones }, status: 200
+    ActionCable.server.broadcast 'game_channel', game: game.to_h
+    render json: { result: 'ok' }, status: 200
   end
 end

@@ -5,7 +5,6 @@ var black_stones = [];
 var white_stones = [];
 
 $(window).on('load', function () {
-    init();
     var board = document.getElementsByClassName('board');
     $(board).on('click', function (event) {
         var clientRect = this.getBoundingClientRect();
@@ -14,6 +13,7 @@ $(window).on('load', function () {
         var point = String.fromCharCode(x + 'A'.charCodeAt(0)) + String(y + 1);
         send_put(point);
     });
+    get_now();
 });
 
 function stone(point_index, color) {
@@ -30,16 +30,6 @@ function clear_board() {
     $('#view_board').html('');
     $('#template_board > svg').clone(true).appendTo('#view_board');
     $('#view_board > svg').show();
-}
-
-$('.init').click(function () {
-    init();
-});
-
-function init() {
-    black_stones = [0x00000008, 0x10000000];
-    white_stones = [0x00000010, 0x08000000];
-    update_board();
 }
 
 function update_board() {
@@ -72,14 +62,29 @@ function send_put(point) {
         },
         dataType: 'json',
         success: function (data) {
-            black_stones = change_32bits(data['black_stones']);
-            white_stones = change_32bits(data['white_stones']);
-            update_board();
         },
         error: function (data) {
             alert('error');
         }
     });
+}
+function get_now() {
+    $.ajax({
+        url: 'top/now',
+        type: 'GET',
+        success: function (data) {
+            receive_game(data);
+        },
+        error: function (data) {
+            console.log('get_now error');
+        }
+    });
+}
+
+function receive_game(data) {
+    black_stones = change_32bits(data['game']['black_stones']);
+    white_stones = change_32bits(data['game']['white_stones']);
+    update_board();
 }
 
 function change_32bits(bit_stones) {
