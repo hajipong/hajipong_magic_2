@@ -1,23 +1,23 @@
 const cell_px = 80;
 const base_point_bit = 0x80000000;
 const color_num = {black: '#333', white: '#FFF'};
-var black_stones = [];
-var white_stones = [];
+let black_stones = [];
+let white_stones = [];
 
 $(window).on('load', function () {
-    var board = document.getElementsByClassName('board');
+    let board = document.getElementsByClassName('board');
     $(board).on('click', function (event) {
-        var clientRect = this.getBoundingClientRect();
-        var x = Math.floor((event.pageX - clientRect.left + window.pageXOffset) / cell_px);
-        var y = Math.floor((event.pageY - clientRect.top + window.pageYOffset) / cell_px);
-        var point = String.fromCharCode(x + 'A'.charCodeAt(0)) + String(y + 1);
-        send_put(point);
+        let offset =$(this).offset();
+        let x = Math.floor((event.pageX - offset.left) / cell_px);
+        let y = Math.floor((event.pageY - offset.top) / cell_px);
+        let point = String.fromCharCode(x + 'A'.charCodeAt(0)) + String(y + 1);
+        App.game.put_stone(point);
     });
-    get_now();
+    update_latest();
 });
 
 function stone(point_index, color) {
-    var circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    let circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
     circle.setAttribute('cx', (point_index % 8) * cell_px + cell_px / 2);
     circle.setAttribute('cy', (point_index / 8 | 0) * cell_px + cell_px / 2);
     circle.setAttribute('r', 32);
@@ -34,9 +34,9 @@ function clear_board() {
 
 function update_board() {
     clear_board();
-    var board = document.createDocumentFragment();
-    for (var i = 0; i < 32; i++) {
-        var point_bit = (base_point_bit >>> i);
+    let board = document.createDocumentFragment();
+    for (let i = 0; i < 32; i++) {
+        let point_bit = (base_point_bit >>> i);
         if ((point_bit & black_stones[0]) !== 0) {
             board.appendChild(stone(i, color_num.black));
         }
@@ -53,24 +53,9 @@ function update_board() {
     document.querySelector('#view_board > svg').appendChild(board);
 }
 
-function send_put(point) {
+function update_latest() {
     $.ajax({
-        url: 'top/put_stone',
-        type: 'POST',
-        data: {
-            'point': point
-        },
-        dataType: 'json',
-        success: function (data) {
-        },
-        error: function (data) {
-            alert('error');
-        }
-    });
-}
-function get_now() {
-    $.ajax({
-        url: 'top/now',
+        url: 'top/latest',
         type: 'GET',
         success: function (data) {
             receive_game(data);
@@ -88,6 +73,6 @@ function receive_game(data) {
 }
 
 function change_32bits(bit_stones) {
-    bit_32 = bit_stones.match(/.{8}/g);
+    let bit_32 = bit_stones.match(/.{8}/g);
     return [parseInt(bit_32[0], 16), parseInt(bit_32[1], 16)];
 }

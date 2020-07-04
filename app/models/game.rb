@@ -1,65 +1,68 @@
+# 対局進行状況を表すモデル
 class Game
-  attr_accessor :id, :turn, :move, :black_stones, :white_stones, :black_time, :white_time
+  include ActiveModel::Model
+
+  attr_accessor :id, :turn, :move, :black_stones, :white_stones, :black_time, :white_time, :black_user_id, :white_user_id
   TURN = { BLACK: 0, WHITE: 1 }.freeze
 
-  def initialize(game_id = nil)
-    if game_id.present?
-      @id = game_id
-      @move = 1
-      @turn = TURN[:BLACK]
-      @black_time = 20 * 60
-      @white_time = 20 * 60
-      @black_stones = 0x0000000810000000
-      @white_stones = 0x0000001008000000
-      save
-    end
+  def self.new_game(game_id, black_user_id, white_user_id)
+    game = Game.new(id: game_id, move: 1, turn: TURN[:BLACK],
+                    black_time: 20 * 60, white_time: 20 * 60,
+                    black_stones: 0x0000000810000000,
+                    white_stones: 0x0000001008000000,
+                    black_user_id: black_user_id,
+                    white_user_id: white_user_id)
+    game.save
+    game
   end
 
   def self.find(game_id)
     Redis.current.with do |redis|
-      return Game.new(game_id) if redis.get("game:#{game_id}:move").nil?
-  
-      game = Game.new
-      game.id = game_id
-      game.move = redis.get("game:#{game_id}:move").to_i
-      game.turn = redis.get("game:#{game_id}:turn").to_i
-      game.black_time = redis.get("game:#{game_id}:black_time").to_i
-      game.white_time = redis.get("game:#{game_id}:white_time").to_i
-      game.black_stones = redis.get("game:#{game_id}:black_stones").to_i
-      game.white_stones = redis.get("game:#{game_id}:white_stones").to_i
-      game
+      data = JSON.parse(redis.get("game:#{game_id}"), symbolize_names: true)
+      return Game.new if data.nil?
+
+      Game.new(id: game_id, move: data[:move].to_i, turn: data[:turn].to_i,
+               black_time: data[:black_time].to_i, white_time: data[:white_time].to_i,
+               black_stones: data[:black_stones].to_i, white_stones: data[:white_stones].to_i,
+               black_user_id: data[:black_user_id].to_i, white_user_id: data[:white_user_id].to_i)
     end
   end
 
   def put(point)
     board = to_board
-    if board.can_put?(point)
-      board.reverse(point)
-      @black_stones = black_turn? ? board.player_stones : board.opponent_stones
-      @white_stones = black_turn? ? board.opponent_stones : board.player_stones
-      @turn = change_turn unless board.opponent_board.pass?
-      @move += 1
-      save
-    end
+    return false unless board.can_put?(point)
+
+    board.reverse(point)
+    @black_stones = black_turn? ? board.player_stones : board.opponent_stones
+    @white_stones = black_turn? ? board.opponent_stones : board.player_stones
+    @turn = change_turn unless board.opponent_board.pass?
+    @move += 1
+    save
+    true
+  end
+
+  def user_turn?(user)
+    return false if user.nil?
+
+    black_turn? && user.id == @black_user_id || !black_turn? && user.id == @white_user_id
   end
 
   def to_h
-    { turn: @turn, black_stones: "%016x"%@black_stones, white_stones: "%016x"%@white_stones }
+    { turn: @turn, black_stones: format('%<stones>016x', stones: @black_stones),
+      white_stones: format('%<stones>016x', stones: @white_stones) }
   end
-
-  private
 
   def save
     Redis.current.with do |redis|
-      redis.set("game:#{@id}:id", @id)
-      redis.set("game:#{@id}:move", @move)
-      redis.set("game:#{@id}:turn", @turn)
-      redis.set("game:#{@id}:black_time", @black_time)
-      redis.set("game:#{@id}:white_time", @white_time)
-      redis.set("game:#{@id}:black_stones", @black_stones)
-      redis.set("game:#{@id}:white_stones", @white_stones)
+      data = { id: @id, move: @move, turn: @turn,
+               black_time: @black_time, white_time: @white_time,
+               black_stones: @black_stones, white_stones: @white_stones,
+               black_user_id: @black_user_id, white_user_id: @white_user_id }.to_json
+      redis.set("game:#{@id}", data)
     end
   end
+
+  private
 
   def to_board
     if black_turn?
